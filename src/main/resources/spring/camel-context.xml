@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd        http://camel.apache.org/schema/spring       http://camel.apache.org/schema/spring/camel-spring.xsd">
+    <bean class="org.mycompany.util.SSLRegistry" id="ssl" scope="singleton"/>
+    <bean class="org.mycompany.util.KillRoute" id="killRoute" scope="singleton"/>
+    <bean class="org.mycompany.util.GetApiId" id="getApiId" scope="singleton"/>
+    <bean class="org.mycompany.util.IncrementCounter" id="increment" scope="singleton"/>
+    <bean class="org.mycompany.util.GeneratePayloadToken"
+        id="payloadToken" scope="singleton"/>
+    <camelContext id="camel" streamCache="true" xmlns="http://camel.apache.org/schema/spring">
+        <dataFormats>
+            <json allowJmsType="true" allowUnmarshallType="true"
+                contentTypeHeader="false"
+                enableJaxbAnnotationModule="false"
+                id="AccessTokenDataFormat" library="Jackson"
+                prettyPrint="false"
+                unmarshalTypeName="org.mycompany.pojo.AccessTokenPojo"
+                useDefaultObjectMapper="true" useList="false"/>
+        </dataFormats>
+        <restConfiguration bindingMode="off" component="jetty"
+            contextPath="/" host="0.0.0.0" port="9090"/>
+        <rest id="rest-82871616-cbc5-4dd8-8554-1d8c03e8246f">
+            <post id="b3912092-fb51-4ed0-9c42-b1b6fbf91470" uri="/accesstoken">
+                <to uri="direct:route"/>
+            </post>
+        </rest>
+        <route id="_route1">
+            <from id="_from1" uri="direct:route"/>
+            <process id="_init_strategy_bs_reg_log" ref="killRoute"/>
+            <convertBodyTo id="_convertBodyTo1" type="java.lang.String"/>
+            <doTry id="_doTry1">
+                <log id="_log1" message="Payload to Core : ${body}"/>
+                <process id="_genPayloadToken" ref="payloadToken"/>
+                <removeHeader headerName="Camel*" id="_removeHeader1"/>
+                <setHeader headerName="Exchange.HTTP_METHOD" id="_setHeader1">
+                    <simple>POST</simple>
+                </setHeader>
+                <setHeader headerName="Exchange.CONTENT_TYPE" id="_setHeader2">
+                    <simple>application/x-www-form-urlencoded</simple>
+                </setHeader>
+                <setBody id="_setBody1">
+                    <!--simple>grant_type=password&amp;username=admin&amp;password=admin&amp;client_id=98N85fBNz1rMlpUIio3mYJEaGtAa</simple>-->
+                    <simple>grant_type=client_credentials&amp;client_id=98N85fBNz1rMlpUIio3mYJEaGtAa&amp;client_secret=VMZp_uDhxxP7CBZ1jXrocTNO2W0a&amp;scope=apim:api_view apim:api_create apim:api_delete apim:api_publish apim:subscription_view apim:subscription_block apim:external_services_discover apim:threat_protection_policy_create apim:threat_protection_policy_manage apim:document_create apim:document_manage apim:mediation_policy_view apim:mediation_policy_create apim:mediation_policy_manage apim:client_certificates_view apim:client_certificates_add apim:client_certificates_update apim:ep_certificates_view apim:ep_certificates_add apim:ep_certificates_update apim:publisher_settings apim:pub_alert_manage apim:shared_scope_manage apim:app_import_export apim:api_import_export apim:api_product_import_export</simple>
+                </setBody>
+                <log id="_log3" message=">>> Headers to wso2 : ${headers}"/>
+                <log id="_log4" message=">>> Body to wso2 : ${body}"/>
+                <to id="_to2" uri="https4://{{wso2.token.address}}?bridgeEndpoint=true&amp;connectionClose=true&amp;throwExceptionOnFailure=false"/>
+                <convertBodyTo id="_convertBodyTo2" type="java.lang.String"/>
+                <log id="_log2" message=">>> Response from Get Token : ${body}"/>
+                <unmarshal id="_unmarshal1">
+                    <custom ref="AccessTokenDataFormat"/>
+                </unmarshal>
+                <log id="_log5" message=">>> Access Token : ${body.accessToken}"/>
+                <setHeader headerName="Authorization" id="_setHeader3">
+                    <simple>Bearer ${body.accessToken}</simple>
+                </setHeader>
+                <setBody id="_setBody2">
+                    <simple/>
+                </setBody>
+                <setHeader headerName="Exchange.HTTP_METHOD" id="_setHeader13">
+                    <simple>GET</simple>
+                </setHeader>
+                <setHeader headerName="Content-Type" id="_setHeader4">
+                    <simple>application/json</simple>
+                </setHeader>
+                <to id="_to3" uri="https4://{{wso2.apidetail.address}}?bridgeEndpoint=true&amp;connectionClose=true&amp;throwExceptionOnFailure=false"/>
+                <log id="_log11" message=">>> Response from Get API Detail : ${body}"/>
+                <convertBodyTo id="_convertBodyTo4" type="java.lang.String"/>
+                <bean id="_bean1" method="process(${body})" ref="getApiId"/>
+                <log id="_log7" message=">>> Body After Get List IDS : ${body}"/>
+                <setProperty id="_setProperty1" propertyName="i">
+                    <simple>0</simple>
+                </setProperty>
+                <split id="_split1">
+                    <simple>${body}</simple>
+                    <log id="_log6" message="id : ${body}"/>
+                    <setProperty id="_setProperty2" propertyName="apiId">
+                        <simple>${body}</simple>
+                    </setProperty>
+                    <setHeader headerName="Exchange.HTTP_METHOD" id="_setHeader7">
+                        <simple>POST</simple>
+                    </setHeader>
+                    <setHeader headerName="Exchange.CONTENT_TYPE" id="_setHeader8">
+                        <simple>application/json</simple>
+                    </setHeader>
+                    <toD id="_to8" uri="https4://{{wso2.republish.address}}?action=Block&amp;apiId=${exchangeProperty[apiId]}&amp;bridgeEndpoint=true&amp;connectionClose=true&amp;throwExceptionOnFailure=false"/>
+                    <log id="_log9" message=">>> Response from Block API : ${body}"/>
+                    <toD id="_to9" uri="https4://{{wso2.republish.address}}?action=Re-Publish&amp;apiId=${exchangeProperty[apiId]}&amp;bridgeEndpoint=true&amp;connectionClose=true&amp;throwExceptionOnFailure=false"/>
+                    <log id="_log8" message=">>> Response from Re-Publish API : ${body}"/>
+                </split>
+                <doCatch id="_doCatch1">
+                    <exception>java.io.IOException</exception>
+                    <exception>java.lang.StringIndexOutOfBoundsException</exception>
+                    <exception>org.apache.camel.component.file.GenericFileOperationFailedException</exception>
+                    <exception>java.lang.NullPointerException</exception>
+                    <exception>java.lang.IllegalArgumentException</exception>
+                    <exception>org.apache.camel.ExpressionEvaluationException</exception>
+                    <exception>org.apache.camel.CamelExchangeException</exception>
+                    <exception>org.apache.camel.language.bean.RuntimeBeanExpressionException</exception>
+                    <exception>org.apache.camel.InvalidPayloadException</exception>
+                    <exception>org.apache.camel.NoTypeConversionAvailableException</exception>
+                    <log id="co_log9" message="Error Message : ${exception.message}, Body : ${body}"/>
+                    <setHeader headerName="Exchange.HTTP_RESPONSE_CODE" id="co_setHeader13">
+                        <constant>500</constant>
+                    </setHeader>
+                    <convertBodyTo id="_convertBodyTo3" type="java.lang.String"/>
+                    <setBody id="co_setBody6">
+                        <simple>Internal Server Error</simple>
+                    </setBody>
+                </doCatch>
+            </doTry>
+        </route>
+    </camelContext>
+</beans>
