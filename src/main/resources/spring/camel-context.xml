@@ -20,7 +20,7 @@
         <restConfiguration bindingMode="off" component="jetty"
             contextPath="/" host="0.0.0.0" port="9090"/>
         <rest id="rest-82871616-cbc5-4dd8-8554-1d8c03e8246f">
-            <post id="b3912092-fb51-4ed0-9c42-b1b6fbf91470" uri="/accesstoken">
+            <post id="b3912092-fb51-4ed0-9c42-b1b6fbf91470" uri="/republishapi">
                 <to uri="direct:route"/>
             </post>
         </rest>
