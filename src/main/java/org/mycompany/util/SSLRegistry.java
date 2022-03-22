@@ -23,7 +23,7 @@ public class SSLRegistry {
 //      keyStoreParameters.setResource("apps-ocp-itree-chain.jks");
 		
 //		DC Environment
-        keyStoreParameters.setResource("client-truststore.jks");
+        keyStoreParameters.setResource("client-truststore-DC.jks");
         
 //      DEV Environment
 //		keyStoreParameters.setResource("apps-ocp-dev-hanabank-co-id-chain.jks");
