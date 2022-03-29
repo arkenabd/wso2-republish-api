@@ -18,42 +18,44 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
-
 @PropertySource("classpath:application.properties")
 
 public class SSLRegistry {
 	@Autowired
-	public SSLRegistry(CamelContext camelContext,@Value("${keystore.base64}") final String base64,@Value("${keystore.pass}") final String pass) {
+	public SSLRegistry(CamelContext camelContext, @Value("${keystore.base64}") final String base64,
+			@Value("${keystore.pass}") final String pass) {
 		KeyStoreParameters keyStoreParameters = new KeyStoreParameters();
-        // Change this path to point to your truststore/keystore as jks files
-		  System.out.println("keystore.base64 "+base64);
-	        System.out.println("keystore.pass "+pass);
-		   String finalBase64 = base64.replace("\n","");
-	        byte[] decodedBytes = Base64.getDecoder().decode(finalBase64);
-	        try {
-				FileUtils.writeByteArrayToFile(new File("src/main/resources/client-truststore.jks"), decodedBytes);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-        keyStoreParameters.setResource("src/main/resources/client-truststore.jks");
-      
-        keyStoreParameters.setPassword(pass);
+		// Change this path to point to your truststore/keystore as jks files
+		System.out.println("keystore.base64 " + base64);
+		System.out.println("keystore.pass " + pass);
+		String finalBase64 = base64.replaceAll("\n", "");
 
-        KeyManagersParameters keyManagersParameters = new KeyManagersParameters();
-        keyManagersParameters.setKeyStore(keyStoreParameters);
-        keyManagersParameters.setKeyPassword(pass);
+		finalBase64 = base64.replaceAll("\\s", "");
+		byte[] decodedBytes = Base64.getDecoder().decode(finalBase64);
+		try {
+			FileUtils.writeByteArrayToFile(new File("src/main/resources/client-truststore.jks"), decodedBytes);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		keyStoreParameters.setResource("src/main/resources/client-truststore.jks");
 
-        TrustManagersParameters trustManagersParameters = new TrustManagersParameters();
-        trustManagersParameters.setKeyStore(keyStoreParameters);
+		keyStoreParameters.setPassword(pass);
 
-        SSLContextParameters sslContextParameters = new SSLContextParameters();
-        sslContextParameters.setKeyManagers(keyManagersParameters);
-        sslContextParameters.setTrustManagers(trustManagersParameters);
+		KeyManagersParameters keyManagersParameters = new KeyManagersParameters();
+		keyManagersParameters.setKeyStore(keyStoreParameters);
+		keyManagersParameters.setKeyPassword(pass);
 
-        HttpComponent httpComponent = camelContext.getComponent("https4", HttpComponent.class);
-        httpComponent.setSslContextParameters(sslContextParameters);
-        //This is important to make your cert skip CN/Hostname checks
-        httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
+		TrustManagersParameters trustManagersParameters = new TrustManagersParameters();
+		trustManagersParameters.setKeyStore(keyStoreParameters);
+
+		SSLContextParameters sslContextParameters = new SSLContextParameters();
+		sslContextParameters.setKeyManagers(keyManagersParameters);
+		sslContextParameters.setTrustManagers(trustManagersParameters);
+
+		HttpComponent httpComponent = camelContext.getComponent("https4", HttpComponent.class);
+		httpComponent.setSslContextParameters(sslContextParameters);
+		// This is important to make your cert skip CN/Hostname checks
+		httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 	}
 }
