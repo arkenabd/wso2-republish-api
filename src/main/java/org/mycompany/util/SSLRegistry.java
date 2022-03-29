@@ -1,37 +1,48 @@
 package org.mycompany.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Base64;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.http4.HttpComponent;
 import org.apache.camel.util.jsse.KeyManagersParameters;
 import org.apache.camel.util.jsse.KeyStoreParameters;
 import org.apache.camel.util.jsse.SSLContextParameters;
 import org.apache.camel.util.jsse.TrustManagersParameters;
+import org.apache.commons.io.FileUtils;
 import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
-@Configuration
+
 @PropertySource("classpath:application.properties")
+
 public class SSLRegistry {
-	
-	public SSLRegistry(CamelContext camelContext) {
+	@Autowired
+	public SSLRegistry(CamelContext camelContext,@Value("${keystore.base64}") final String base64,@Value("${keystore.pass}") final String pass) {
 		KeyStoreParameters keyStoreParameters = new KeyStoreParameters();
         // Change this path to point to your truststore/keystore as jks files
-		
-//		I3 Environment
-//      keyStoreParameters.setResource("apps-ocp-itree-chain.jks");
-		
-//		DC Environment
-        keyStoreParameters.setResource("client-truststore-DC.jks");
-        
-//      DEV Environment
-//		keyStoreParameters.setResource("apps-ocp-dev-hanabank-co-id-chain.jks");
-        keyStoreParameters.setPassword("wso2carbon");
+		  System.out.println("keystore.base64 "+base64);
+	        System.out.println("keystore.pass "+pass);
+		   String finalBase64 = base64.replace("\n","");
+	        byte[] decodedBytes = Base64.getDecoder().decode(finalBase64);
+	        try {
+				FileUtils.writeByteArrayToFile(new File("src/main/resources/client-truststore.jks"), decodedBytes);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        keyStoreParameters.setResource("src/main/resources/client-truststore.jks");
+      
+        keyStoreParameters.setPassword(pass);
 
         KeyManagersParameters keyManagersParameters = new KeyManagersParameters();
         keyManagersParameters.setKeyStore(keyStoreParameters);
-        keyManagersParameters.setKeyPassword("wso2carbon");
+        keyManagersParameters.setKeyPassword(pass);
 
         TrustManagersParameters trustManagersParameters = new TrustManagersParameters();
         trustManagersParameters.setKeyStore(keyStoreParameters);
